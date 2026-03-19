@@ -380,8 +380,8 @@ class OdooPdfFileReader(PdfFileReader):
             if not file_path:
                 return []
             for p in file_path[1::2]:
-                attachment = p.getObject()
-                yield (attachment["/F"], attachment["/EF"]["/F"].getObject().getData())
+                attachment = p.get_object()
+                yield (attachment["/F"], attachment["/EF"]["/F"].get_object().get_data())
         except Exception:  # noqa: BLE001
             # malformed pdf (i.e. invalid xref page)
             return []
@@ -436,10 +436,10 @@ class OdooPdfFileWriter(PdfFileWriter):
         })
         if self._root_object.get('/Names') and self._root_object['/Names'].get('/EmbeddedFiles'):
             names_array = self._root_object["/Names"]["/EmbeddedFiles"]["/Names"]
-            names_array.extend([attachment.getObject()['/F'], attachment])
+            names_array.extend([attachment.get_object()['/F'], attachment])
         else:
             names_array = ArrayObject()
-            names_array.extend([attachment.getObject()['/F'], attachment])
+            names_array.extend([attachment.get_object()['/F'], attachment])
 
             embedded_files_names_dictionary = DictionaryObject()
             embedded_files_names_dictionary.update({
@@ -469,8 +469,8 @@ class OdooPdfFileWriter(PdfFileWriter):
         assert attachment, "embed_odoo_attachment cannot be called without attachment."
         self.addAttachment(attachment.name, attachment.raw, subtype=subtype or attachment.mimetype)
 
-    def cloneReaderDocumentRoot(self, reader):
-        super().cloneReaderDocumentRoot(reader)
+    def clone_reader_document_root(self, reader):
+        super().clone_reader_document_root(reader)
         self._reader = reader
         # Try to read the header coming in, and reuse it in our new PDF
         # This is done in order to allows modifying PDF/A files after creating them (as PyPDF does not read it)
@@ -497,6 +497,10 @@ class OdooPdfFileWriter(PdfFileWriter):
         if not hasattr(self, '_ID'):
             # Look if we have an ID in the incoming stream and use it.
             self._set_id(reader.trailer.get('/ID', None))
+
+    def cloneReaderDocumentRoot(self, reader):
+        """Backward compatibility: PyPDF2 3.0+ / pypdf use clone_reader_document_root."""
+        return self.clone_reader_document_root(reader)
 
     def _set_id(self, pdf_id):
         if not pdf_id:
@@ -538,7 +542,7 @@ class OdooPdfFileWriter(PdfFileWriter):
             icc_profile_file_data = compress(icc_profile.read())
 
         icc_profile_stream_obj = DecodedStreamObject()
-        icc_profile_stream_obj.setData(icc_profile_file_data)
+        icc_profile_stream_obj.set_data(icc_profile_file_data)
         icc_profile_stream_obj.update({
             NameObject("/Filter"): NameObject("/FlateDecode"),
             NameObject("/N"): NumberObject(3),
@@ -572,9 +576,9 @@ class OdooPdfFileWriter(PdfFileWriter):
             fonts = {}
             # First browse through all the pages of the pdf file, to get a reference to all the fonts used in the PDF.
             for page in pages:
-                for font in page.getObject()['/Resources']['/Font'].values():
-                    for descendant in font.getObject()['/DescendantFonts']:
-                        fonts[descendant.idnum] = descendant.getObject()
+                for font in page.get_object()['/Resources']['/Font'].values():
+                    for descendant in font.get_object()['/DescendantFonts']:
+                        fonts[descendant.idnum] = descendant.get_object()
 
             # Then for each font, rewrite the width array with the information taken directly from the font file.
             # The new width are calculated such as width = round(1000 * font_glyph_width / font_units_per_em)
@@ -596,7 +600,7 @@ class OdooPdfFileWriter(PdfFileWriter):
                 font[NameObject('/W')] = ArrayObject([NumberObject(1), ArrayObject(glyph_widths)])
                 stream.close()
 
-        outlines = self._root_object['/Outlines'].getObject()
+        outlines = self._root_object['/Outlines'].get_object()
         outlines[NameObject('/Count')] = NumberObject(1)
 
         # [6.7.2.2-1] include a MarkInfo dictionary containing "Marked" with true value
@@ -626,7 +630,7 @@ class OdooPdfFileWriter(PdfFileWriter):
         footer = b'<?xpacket end="w"?>'
         metadata = b'%s%s%s' % (header, metadata_content, footer)
         file_entry = DecodedStreamObject()
-        file_entry.setData(metadata)
+        file_entry.set_data(metadata)
         file_entry.update({
             NameObject("/Type"): NameObject("/Metadata"),
             NameObject("/Subtype"): NameObject("/XML"),
@@ -647,7 +651,7 @@ class OdooPdfFileWriter(PdfFileWriter):
         :return:
         '''
         file_entry = DecodedStreamObject()
-        file_entry.setData(attachment['content'])
+        file_entry.set_data(attachment['content'])
         file_entry.update({
             NameObject("/Type"): NameObject("/EmbeddedFile"),
             NameObject("/Params"):
